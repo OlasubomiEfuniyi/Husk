@@ -19,6 +19,7 @@
 #define INPUT "<"
 #define OUTPUT ">"
 
+static Tree *parse_initial();
 static int read_input(int max, char input[], FILE *source);
 static int contains_operator(const char *source, const char *operator);
 static int break_string(char *string, char *operator, char **left, char **right);
@@ -27,13 +28,28 @@ static int get_redirection_filename(const char *source, const char *type,
 static void print_node(Node *node);
 
 int main(void) {
-  parse();
+  parse_initial();
   
   return SUCCESS;
 }
 
-Tree *parse() {
-   char input[MAX_INPUT_LEN + 1] = "";
+/* This function reads input from the command line and
+   passes it as an argument to parse. It returns the result
+   returned by pass and its purpose is to aid the initial 
+   recursive call of the parse function. */ 
+static Tree *parse_initial() {
+  char input[MAX_INPUT_LEN + 1] = "";
+
+  /* Read in the command line input */
+  read_input(MAX_INPUT_LEN, input, stdin);
+
+  return parse(input);
+}
+
+/* This function is recursive and hence, is called
+   with the input already obtained from the user by 
+   parse_initial. Look in parse.h for more details. */
+Tree *parse(char *input) {
    char input_filename[MAX_FILENAME_LEN + 1] = "";
    char output_filename[MAX_FILENAME_LEN + 1] = "";
    
@@ -43,11 +59,10 @@ Tree *parse() {
    Tree *tree = NULL;
    Node *node = NULL;
    
-   /* Read in the command line input */
-   read_input(MAX_INPUT_LEN, input, stdin);
+
    len = strlen(input);
    
-   /* Look for a subshell to begin with */ 
+   /*********** Look for a subshell to begin with ********************/ 
    if(*input == '(') {
      /* Find the last closing parenthesis */
      char *c_ptr = input + len -1;
@@ -107,7 +122,7 @@ Tree *parse() {
 
      print_node(node);
    } 
-   
+   /********* END of subshell detection ****************/
    return NULL;
 } 
 

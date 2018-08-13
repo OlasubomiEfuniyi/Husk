@@ -10,5 +10,5 @@
 
 /* This function parses a user's input and returns it in the form of a 
    binary tree.  */
-Tree *parse();
+Tree *parse(char *input);
 #endif
