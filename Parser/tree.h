@@ -9,7 +9,7 @@ typedef struct node {
   Type type;
   char *input;
   char *output;
-  char **args;
+  char **args; /* Null terminated array of argument strings */
 } Node;
 
 /* This  structure represents a tree */

@@ -24,6 +24,7 @@ static int contains_operator(const char *source, const char *operator);
 static int break_string(char *string, char *operator, char **left, char **right);
 static int get_redirection_filename(const char *source, const char *type,
 				    char *filename);
+static void print_node(Node *node);
 
 int main(void) {
   parse();
@@ -39,7 +40,8 @@ Tree *parse() {
    int len = 0;
    
    /* Create the Tree */
-   Tree tree = {NULL, 0};
+   Tree *tree = NULL;
+   Node *node = NULL;
    
    /* Read in the command line input */
    read_input(MAX_INPUT_LEN, input, stdin);
@@ -68,17 +70,42 @@ Tree *parse() {
        if(contains_operator(c_ptr, INPUT)) {
 	 /* Extract the filename for input redirection */
 	 get_redirection_filename(c_ptr, INPUT, input_filename);
-	 printf("INPUT: %s\n", input_filename);
        }
 
        if(contains_operator(c_ptr, OUTPUT)) {
 	 /* Extract the filename for output redirection */
 	 get_redirection_filename(c_ptr, OUTPUT, output_filename);
-	 printf("OUTPUT: %s\n", output_filename);
        }
      }
 
      /* Set up the node and add it to the tree */
+     if((node = calloc(1, sizeof(Node))) == NULL) {
+       perror("Calloc failed");
+     }
+
+     (node->type) = COMMAND;
+
+     /* Add possible input and output files to the node */
+     (node->input) = (strcmp(input_filename, "") == 0) ? NULL :
+                                                input_filename;
+     (node->output) = (strcmp(output_filename, "") == 0) ? NULL :
+                                                output_filename;
+     /* Add an arguements array to the node */
+     /* Note: Subshell has no other arguments other than the name of 
+	the name of the command */
+     if(((node -> args) = calloc(2, 1)) == NULL) {
+       perror("Calloc failed");
+     }
+
+     /* Dynamically allocate space for the command name */
+     if(((node -> args)[0] = calloc(strlen(SUBSHELL), 1)) == NULL) {
+       perror("Calloc failed");
+     }
+     
+     strcpy((node -> args)[0], SUBSHELL);
+     (node -> args)[1] = NULL;
+
+     print_node(node);
    } 
    
    return NULL;
@@ -197,4 +224,32 @@ static int get_redirection_filename(const char *source, const char *type,
   
   return SUCCESS;
 }
- 
+
+/* This function prints the information stored in the
+   members of a Node structure. */ 
+static void print_node(Node *node) {
+  if(node != NULL) {
+    char **args;
+    
+    printf("TYPE: ");
+    if((node->type) == COMMAND) {
+      printf("COMMAND\n");
+    } else if((node->type) == OPERATOR) {
+      printf("OPERATOR\n");
+    } else {
+      printf("UNKNOWN\n");
+    }
+
+    printf("INPUT: %s\n", (node->input));
+    printf("OUTPUT: %s\n", (node->output));
+
+    args = (node->args);
+    printf("ARGS: ");
+    while(*args) {
+      printf("%s ", *args);
+      args++;
+    }
+
+    printf("\n");
+  }
+}
