@@ -9,15 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "parser.h"
-
-#define MAX_INPUT_LEN 1024
-#define MAX_FILENAME_LEN 80
-#define PIPE "|"
-#define AND "&&"
-#define OR "||"
-#define SUBSHELL "()"
-#define INPUT "<"
-#define OUTPUT ">"
+#include "tree.h"
 
 static Tree *parse_initial();
 static int read_input(int max, char input[], FILE *source);
@@ -27,36 +19,35 @@ static int get_redirection_filename(const char *source, const char *type,
 				    char *filename);
 static void print_node(Node *node);
 
-int main(void) {
-  parse_initial();
-  
-  return SUCCESS;
-}
-
 /* This function reads input from the command line and
    passes it as an argument to parse. It returns the result
    returned by pass and its purpose is to aid the initial 
    recursive call of the parse function. */ 
 static Tree *parse_initial() {
   char input[MAX_INPUT_LEN + 1] = "";
+  Tree *tree = NULL;
 
+  if((tree = calloc(1, sizeof(Tree))) == NULL) {
+    perror("Calloc failed");
+    exit(EXIT_FAILURE);
+  }
+   
   /* Read in the command line input */
   read_input(MAX_INPUT_LEN, input, stdin);
-
-  return parse(input);
+  
+  return parse(input, tree);
 }
 
 /* This function is recursive and hence, is called
    with the input already obtained from the user by 
    parse_initial. Look in parse.h for more details. */
-Tree *parse(char *input) {
+Tree *parse(char *input, Tree *tree) {
    char input_filename[MAX_FILENAME_LEN + 1] = "";
    char output_filename[MAX_FILENAME_LEN + 1] = "";
    
    int len = 0;
    
    /* Create the Tree */
-   Tree *tree = NULL;
    Node *node = NULL;
    
 
@@ -74,6 +65,7 @@ Tree *parse(char *input) {
         parenthesis was found */ 
      if(c_ptr == input) {
        fprintf(stderr, "Invalid command: Parentheses are unbalanced\n");
+       exit(EXIT_FAILURE);
      }
 
      /* Loop terminated because closing parentheses
@@ -96,6 +88,7 @@ Tree *parse(char *input) {
      /* Set up the node and add it to the tree */
      if((node = calloc(1, sizeof(Node))) == NULL) {
        perror("Calloc failed");
+       exit(EXIT_FAILURE);
      }
 
      (node->type) = COMMAND;
@@ -108,19 +101,21 @@ Tree *parse(char *input) {
      /* Add an arguements array to the node */
      /* Note: Subshell has no other arguments other than the name of 
 	the name of the command */
-     if(((node -> args) = calloc(2, 1)) == NULL) {
+     if(((node -> args) = calloc(2, sizeof(char *))) == NULL) {
        perror("Calloc failed");
+       exit(EXIT_FAILURE);
      }
 
      /* Dynamically allocate space for the command name */
-     if(((node -> args)[0] = calloc(strlen(SUBSHELL), 1)) == NULL) {
+     if(((node -> args)[0] = calloc(strlen(SUBSHELL) + 1, 1)) == NULL) {
        perror("Calloc failed");
+       exit(EXIT_FAILURE);
      }
      
      strcpy((node -> args)[0], SUBSHELL);
      (node -> args)[1] = NULL;
 
-     print_node(node);
+     add_node(tree, node);
    } 
    /********* END of subshell detection ****************/
    return NULL;
@@ -139,7 +134,10 @@ static int read_input(int max, char input[], FILE *source) {
   char *buffer = NULL;
   
   /* Dynamically allocate memory for the buffer */
-  buffer = calloc(max, 1);
+  if((buffer = calloc(max, 1)) == NULL) {
+    perror("Calloc failed");
+    exit(EXIT_FAILURE);
+  }
   
   if(fgets(buffer, max, source) != NULL) {
     /* Remove the newline character and determine the 

@@ -7,8 +7,16 @@
 #define FAILURE 1
 #define TRUE 1
 #define FALSE 0
+#define MAX_INPUT_LEN 1024
+#define MAX_FILENAME_LEN 80
+#define PIPE "|"
+#define AND "&&"
+#define OR "||"
+#define SUBSHELL "()"
+#define INPUT "<"
+#define OUTPUT ">"
 
 /* This function parses a user's input and returns it in the form of a 
    binary tree.  */
-Tree *parse(char *input);
+Tree *parse(char *input, Tree *tree);
 #endif
