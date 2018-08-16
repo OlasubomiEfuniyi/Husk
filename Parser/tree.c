@@ -11,8 +11,18 @@
 #include "tree.h"
 #include "stack.h"
 
-#define STACK_SIZE 20 
+#define STACK_SIZE 20
+#define IS_COMMAND(node) ((node)->type == COMMAND &&\
+			  strcmp(SUBSHELL, (node)->args[0]) != 0)
+#define IS_SUBSHELL(node) (strcmp(SUBSHELL, (node)->args[0]) == 0)
+
 static Node *add_node_aux(Tree *tree, Node *node, Stack *stack);
+
+void init_tree(Tree *tree) {
+  tree->root = NULL;
+  tree->left = NULL;
+  tree->right = NULL;
+}
 
 Node *add_node(Tree *tree, Node *node) {
   Stack stack;
@@ -27,14 +37,12 @@ static Node *add_node_aux(Tree *tree, Node *node, Stack *stack) {
       /* First node to be added to the tree */
       (tree->root) = node;
       return node;
-    } else if((tree->root->type == COMMAND &&
-	      strcmp("()", tree->root->args[0]) != 0) ||
-	      (strcmp("()", tree->root->args[0]) == 0 &&
-	       tree->left)) {
+    } else if(IS_COMMAND(tree->root) || (IS_SUBSHELL(tree->root) &&
+	     tree->left && IS_COMMAND(tree->left->root))) {
       /* The root of this tree is a COMMAND node and 
          is not a subshell command or it represents 
-         a subshell which already has its maximum
-         number of subtrees, 1. */
+         a subshell whose left subtree is a command node
+         other than subshell. */
       /* Get the last overlooked right subtree */
       Tree *t = pop(stack);
 
@@ -64,21 +72,20 @@ static Node *add_node_aux(Tree *tree, Node *node, Stack *stack) {
     } else if((tree -> left) && !(tree -> right)) {
       /* Determine if the root of the left subtree is a 
          leaf or not */
-      if(tree->left->root && strcmp("()", tree->left->root->args[0]) != 0
-	 && (tree->left->root->type) == COMMAND) {	
+      if(tree->left->root && IS_COMMAND(tree->left->root)) {	
 	 /* The root of the left subtree is a leaf. Subshells
 	    are not treated the same as other commands in this 
 	    case. */
 	 (tree->right) = calloc(1, sizeof(Tree));
 	 return add_node_aux((tree->right), node, stack);
       } else if((tree->left->root->type) == OPERATOR ||
-	       (tree->left->root && strcmp("()", tree->left->root->args[0]) == 0)) {	
+		(tree->left->root && IS_SUBSHELL(tree->left->root))) {	
 	/* The root of the left subtree is not a leaf. Subshells 
 	   are treated the same as operators in this case. */
 	/* Save the tree so that you can potentially access the right 
            subtree down the line. Don't save tree if its root is
-           a subshell. */
-	if(strcmp("()", tree->root->args[0]) != 0) {
+           a subshell since its right subtree is always unused. */
+	if(!IS_SUBSHELL(tree->root)) {
 	  push(stack, tree);
 	}
 	/* Attempt to add the node to the left subtree first
