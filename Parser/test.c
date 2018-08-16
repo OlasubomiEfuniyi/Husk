@@ -94,21 +94,18 @@ void test_pop() {
 /*********** START of tree test *************/
 /* This function tests the add_node 
    function defined in tree.c */
-int test_add_node(void) {
+void test_add_node(void) {
   Tree tree = {NULL, NULL, NULL};
 
   Node *node = calloc(1, sizeof(Node));
-   
-  node->type = COMMAND;
-  node->args = calloc(2, sizeof(char *));
-  node->args[0] = calloc(strlen(SUBSHELL) + 1, 1);
-  strcpy(node->args[0], "()");
-  
-  print_tree(&tree);
-  add_node(&tree, node);
-  print_tree(&tree);
 
-  printf("\n");
+  printf("test_add_node:\n");
+  node->type = OPERATOR;
+  node->args = calloc(2, sizeof(char *));
+  node->args[0] = calloc(strlen(PIPE) + 1, 1);
+  strcpy(node->args[0], "||"); 
+  add_node(&tree, node);
+ 
   
   node = calloc(1, sizeof(Node));
   node->type = OPERATOR;
@@ -116,9 +113,13 @@ int test_add_node(void) {
   node->args[0] = calloc(strlen(AND) + 1, 1);
   strcpy(node->args[0], AND);
   add_node(&tree, node);
-  print_tree(&tree);
-
-  printf("\n");
+  
+  node = calloc(1, sizeof(Node));
+  node->type = OPERATOR;
+  node->args = calloc(2, sizeof(char *));
+  node->args[0] = calloc(strlen("|") + 1, 1);
+  strcpy(node->args[0], "|");
+  add_node(&tree, node);
   
   node = calloc(1, sizeof(Node));
   node->type = COMMAND;
@@ -126,28 +127,40 @@ int test_add_node(void) {
   node->args[0] = calloc(strlen("ls") + 1, 1);
   strcpy(node->args[0], "ls");
   add_node(&tree, node);
-  print_tree(&tree);
 
-  printf("\n");
-  
   node = calloc(1, sizeof(Node));
-  node->type = OPERATOR;
+  node->type = COMMAND;
+  node->args = calloc(2, sizeof(char *));
+  node->args[0] = calloc(strlen(SUBSHELL) + 1, 1);
+  strcpy(node->args[0], "()");
+  add_node(&tree, node);
+
+  node = calloc(1, sizeof(Node));
+  node->type = COMMAND;
   node->args = calloc(2, sizeof(char *));
   node->args[0] = calloc(strlen("grep") + 1, 1);
   strcpy(node->args[0], "grep");
   add_node(&tree, node);
-  print_tree(&tree);
 
-  printf("\n");
   node = calloc(1, sizeof(Node));
-  node->type = OPERATOR;
+  node->type = COMMAND;
+  node->args = calloc(2, sizeof(char *));
+  node->args[0] = calloc(strlen("ps") + 1, 1);
+  strcpy(node->args[0], "ps");
+  add_node(&tree, node);
+  
+  node = calloc(1, sizeof(Node));
+  node->type = COMMAND;
   node->args = calloc(2, sizeof(char *));
   node->args[0] = calloc(strlen("nano") + 1, 1);
   strcpy(node->args[0], "nano");
+  node->input = calloc(20, 1);
+  node->output = calloc(20, 1);
+  strcpy(node->input, "input.txt");
+  strcpy(node->output, "output.txt");
   add_node(&tree, node);
+
   print_tree(&tree);
-  
-  return SUCCESS;
 }
 /*********** END of tree test **********/
 
@@ -157,7 +170,7 @@ int main(void) {
   test_push();
   test_pop();
   
-  /*test_add_node();*/
+  test_add_node();
   
   exit(EXIT_SUCCESS);
 }
