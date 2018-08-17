@@ -9,6 +9,10 @@
 #define INPUT "<"
 #define OUTPUT ">"
 
+#define IS_COMMAND(node) ((node)->type == COMMAND &&\
+			  strcmp(SUBSHELL, (node)->args[0]) != 0)
+#define IS_SUBSHELL(node) (strcmp(SUBSHELL, (node)->args[0]) == 0)
+
 typedef enum type{OPERATOR, COMMAND} Type;
 
 /* This structure represents a node in the tree */

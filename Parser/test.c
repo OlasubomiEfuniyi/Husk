@@ -319,6 +319,15 @@ void test_add_node3(void) {
 }
 /*********** END of tree test **********/
 
+/*********** START of parser test ******/
+
+void test_parse(void) {
+  printf("test_parse:\n");
+  parse();
+}
+
+/*********** END of parser test *******/
+
 int main(void) {
 
   test_init_stack();
@@ -328,6 +337,7 @@ int main(void) {
   test_add_node1();
   test_add_node2();
   test_add_node3();
+  test_parse();
   
   exit(EXIT_SUCCESS);
 }

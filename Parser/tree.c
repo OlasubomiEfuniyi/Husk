@@ -12,9 +12,6 @@
 #include "stack.h"
 
 #define STACK_SIZE 20
-#define IS_COMMAND(node) ((node)->type == COMMAND &&\
-			  strcmp(SUBSHELL, (node)->args[0]) != 0)
-#define IS_SUBSHELL(node) (strcmp(SUBSHELL, (node)->args[0]) == 0)
 
 static Node *add_node_aux(Tree *tree, Node *node, Stack *stack);
 
