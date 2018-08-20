@@ -18,6 +18,9 @@ static int break_string(const char *string, const char *operator, char *left, ch
 static int get_redirection_filename(const char *source, const char *type,
 				    char *filename);
 static void print_node(Node *node);
+static void trim(char **string);
+static int process_conjunction(char *input, const char *conjunction,
+			       Tree *tree, char *left, char *right);
 
 /* This function reads input from the command line and
    passes it as an argument to parse_aux. It returns the result
@@ -32,9 +35,9 @@ Tree *parse(void) {
     return NULL;
   }
    
-  /* Read in the command line input */
+  /* Read in the command line input. The resultant string
+     is devoid of the newline character and has been trimmed. */
   read_input(MAX_INPUT_LEN, input, stdin);
-  
   tree = parse_aux(input, tree);
   print_tree(tree);
   return tree;
@@ -46,8 +49,6 @@ Tree *parse(void) {
 static Tree *parse_aux(char *input, Tree *tree) {
   /* Note: The order of detection matters to the tree
      structure. */
-   char input_filename[MAX_FILENAME_LEN + 1] = "";
-   char output_filename[MAX_FILENAME_LEN + 1] = "";
    int len = 0;
    Node *node = NULL;
    Tree *res = NULL;
@@ -58,11 +59,17 @@ static Tree *parse_aux(char *input, Tree *tree) {
    }
 
    len = strlen(input);
-   
+
+   /* Trim the input string */
+   trim(&input);
+
    /*********** START of SUBSHELL detection ********************/ 
    if(*input == '(') {
-     /* Find the last closing parenthesis */
+     char *input_filename = NULL;
+     char *output_filename = NULL;
      char *c_ptr = input + len -1;
+     
+     /* Find the last closing parenthesis */
      while(*c_ptr != ')' && c_ptr != input) {
        c_ptr--;
      }
@@ -86,11 +93,19 @@ static Tree *parse_aux(char *input, Tree *tree) {
             take place. */
 	 if(contains_operator(c_ptr, INPUT)) {
 	   /* Extract the filename for input redirection */
+	   if((input_filename = calloc(MAX_FILENAME_LEN + 1, 1)) == NULL) {
+	      perror("Calloc failed");
+	      return NULL;
+           }
 	   get_redirection_filename(c_ptr, INPUT, input_filename);
 	 }
 
 	 if(contains_operator(c_ptr, OUTPUT)) {
 	   /* Extract the filename for output redirection */
+	   if((output_filename = calloc(MAX_FILENAME_LEN + 1, 1)) == NULL) {
+	      perror("Calloc failed");
+	      return NULL;
+           }
 	   get_redirection_filename(c_ptr, OUTPUT, output_filename);
 	 }
 
@@ -104,10 +119,20 @@ static Tree *parse_aux(char *input, Tree *tree) {
 	 (node->type) = COMMAND;
 
 	 /* Add possible input and output files to the node */
-	 (node->input) = (strcmp(input_filename, "") == 0) ? NULL :
+	 (node->input) = (!input_filename || strcmp(input_filename, "") == 0) ? NULL :
 	   input_filename;
-	 (node->output) = (strcmp(output_filename, "") == 0) ? NULL :
+	 (node->output) = (!output_filename || strcmp(output_filename, "") == 0) ? NULL :
 	   output_filename;
+
+	 /* Free memory if allocated but is not being used since it is empty */
+	 if(input_filename && !(*input_filename)) {
+	   free(input_filename);
+	 }
+
+	 if(output_filename && !(*output_filename)) {
+	   free(output_filename);
+	 }
+	 
 	 /* Add an arguements array to the node */
 	 /* Note: Subshell has no other arguments other than the name of 
 	    the name of the command */
@@ -152,52 +177,26 @@ static Tree *parse_aux(char *input, Tree *tree) {
 
    /********* START of OR detection *******************/
    if(contains_operator(input, OR)) {
-     /* Parse OR operator */
      char *left = NULL;
      char *right = NULL;
-     
-     /* Set up node and add it to the tree */
-     if((node = calloc(1, sizeof(Node))) == NULL) {
-       perror("Calloc failed");
-       return NULL;
-     }
-
-     node->type = OPERATOR;
-
-     /* Dynamically allocate memory for the operators name in a
-        NULL terminated string array */
-     if((node->args = calloc(2, sizeof(char *))) == NULL) {
-       perror("Calloc failed");
-       return NULL;
-     }
-
-     if((node->args[0] = calloc(strlen(OR) + 1, 1)) == NULL) {
-       perror("Calloc failed");
-       return NULL;
-     }
-
-     strcpy(node->args[0], OR);
-     add_node(tree, node);
-
+ 
      /* Dynamically allocate space for the left and right tokens
-        of the || operator */
+        of the conjunction operator */
      /* left has at most len - 2 characters pluss null character */
-     if((left = calloc (len-1, 1)) == NULL) {
+     if((left = calloc (len - 1, 1)) == NULL) {
        perror("Calloc failed");
        return NULL;
      }
 
-     /* right has at most len - 2 characters pluss null character */
-     if((right = calloc (len-1, 1)) == NULL) {
+     /* right has at most len - 2  characters pluss null character */
+     if((right = calloc (len - 1, 1)) == NULL) {
        perror("Calloc failed");
        return NULL;
      }
-	  
-     break_string(input, OR, left, right);
 
-     /* Make sure the structure of the input is correct */
-     if(*left == '\0' || *right == '\0') {
-       fprintf(stderr, "Error: Invalid us of ||\n");
+     /* Add the conjunction to the tree and get its left and
+        right operand */
+     if(process_conjunction(input, OR, tree, left, right) == FAILURE) {
        return NULL;
      }
 
@@ -207,12 +206,214 @@ static Tree *parse_aux(char *input, Tree *tree) {
 
      free(left);
      free(right);
-     
+
      return res;
    }
-
-   return tree;
    /*********** END of OR detection ***********/
+
+   /*********** START of AND detection ********/
+   else if(contains_operator(input, AND)) {
+     char *left = NULL;
+     char *right = NULL;
+
+     /* Dynamically allocate space for the left and right tokens
+        of the conjunction operator */
+     /* left has at most len - 2  characters pluss null character */
+     if((left = calloc (len - 1, 1)) == NULL) {
+       perror("Calloc failed");
+       return NULL;
+     }
+
+     /* right has at most len - 2 characters plus null character */
+     if((right = calloc (len - 1, 1)) == NULL) {
+       perror("Calloc failed");
+       return NULL;
+     }
+
+     /* Add the conjunction to the tree and get its left and
+        right operand */
+     if(process_conjunction(input, AND, tree, left, right) == FAILURE) {
+       return NULL;
+     }
+
+     /* Parse the left side of && and then the right side */
+     res = parse_aux(left, tree);
+     res = parse_aux(right, res); /* Pass the most up to date tree */
+
+     free(left);
+     free(right);
+
+     return res;
+   }
+   /********** END of AND detection **********/
+
+   /********** START of PIPE detection *******/
+   else if(contains_operator(input, PIPE)) {
+     char *left = NULL;
+     char *right = NULL;
+     
+     /* Dynamically allocate space for the left and right tokens
+        of the conjunction operator */
+     /* left has at most len - 2 characters pluss null character */
+     if((left = calloc (len - 1, 1)) == NULL) {
+       perror("Calloc failed");
+       return NULL;
+     }
+
+     /* right has at most len - 2 characters pluss null character */
+     if((right = calloc (len - 1, 1)) == NULL) {
+       perror("Calloc failed");
+       return NULL;
+     }
+
+     /* Add the conjunction to the tree and get its left and
+        right operand */
+     if(process_conjunction(input, PIPE, tree, left, right) == FAILURE) {
+       return NULL;
+     }
+
+     /* Parse the left side of && and then the right side */
+     res = parse_aux(left, tree);
+     res = parse_aux(right, res); /* Pass the most up to date tree */
+
+     free(left);
+     free(right);
+
+     return res;
+   }
+   /********* END of PIPE detection *********/
+
+   /************ START of COMMAND detection ******/
+   else {
+     /* Note: Any input string that does not contain
+        an operator is assumed to be a command */
+     char *input_filename = NULL;
+     char *output_filename = NULL;
+     int count = 0, count_space = TRUE,  i = 0;
+     char *temp = input, *temp_str_ptr = NULL;
+     char temp_str[MAX_INPUT_LEN] = "";
+     
+     /* Create and setup the node to represent the command in the tree */
+     if((node = calloc(1, sizeof(Node))) == NULL) {
+       perror("Calloc failed");
+       return NULL;
+     }
+
+     node->type = COMMAND;
+
+     /* Check if the input contains the input redirection
+        operator */
+     if(contains_operator(input, INPUT)) {
+       /* Extract filename for input redirection */
+       if((input_filename = calloc(MAX_FILENAME_LEN + 1, 1)) == NULL) {
+	 perror("Calloc failed");
+	 return NULL;
+       }
+       
+       get_redirection_filename(input, INPUT, input_filename);
+     }
+
+     /* Check if the input contains the output redirection operator */
+     if(contains_operator(input, OUTPUT)) {
+       /* Extract the filename for output redirection */
+       if((output_filename = calloc(MAX_FILENAME_LEN + 1, 1)) == NULL) {
+	 perror("Calloc failed");
+	 return NULL;
+       }
+       
+       get_redirection_filename(input, OUTPUT, output_filename);
+     }
+
+     node->input = (!input_filename || *input_filename == '\0') ? NULL : input_filename;
+     node->output = (!output_filename || *output_filename == '\0') ? NULL : output_filename;
+
+     /* Free memory if unused */
+     if(input_filename && !(*input_filename)) {
+       free(input_filename);
+     }
+
+     if(output_filename && !(*output_filename)) {
+       free(output_filename);
+     }
+
+     /* Count number of arguments.*/
+     while(*temp != *INPUT && *temp != *OUTPUT && *temp != '\0') {
+       /* Stop when *input is input redirection, output redirection
+          or null byte */
+       if(*temp == ' ' && count_space) {
+	 count++;
+	 count_space = FALSE;
+       } else if(*temp != ' ') {
+	 count_space = TRUE;
+       } 
+
+       temp++;
+     }
+
+     /* Increment count if loop was stopped by end of string. Since input
+        is trimmed, there will never be a space before end of string. Do
+        not do the same for input and output redirection because  they are expected 
+        to have spaces before them and hence, the last argument would have been taken
+        care of. */
+     if(*temp == '\0') {
+       count++;
+     }
+     
+     /* Allocate memory for the arguments */
+     if((node->args = calloc(count + 1, sizeof(char *))) == NULL) {
+       perror("Calloc failed");
+       return NULL;
+     }
+
+     /* Fill the arguments array */
+     temp = input;
+     temp_str_ptr = temp_str;
+     while(*temp != *INPUT && *temp != *OUTPUT && *temp != '\0') {
+       /* Stop when *input is input redirection, output redirection
+          or null byte */
+       if(*temp == ' ' && count_space) {
+	 *temp_str_ptr = '\0';
+	 if((node->args[i] = calloc(strlen(temp_str) + 1, 1)) == NULL) {
+	   perror("Calloc failed");
+	   return NULL;
+	 }
+
+	 strcpy(node->args[i], temp_str);
+	 /* Clear the temp string */
+	 temp_str_ptr = temp_str;
+	 count_space = FALSE;
+	 i++;
+       } else if(*temp != ' ') {
+	 *temp_str_ptr = *temp;
+	 count_space = TRUE;
+	 temp_str_ptr++;
+       }
+       
+       temp++;
+     }
+
+     /* Add a final argument to the array if null byte
+        is encountered. Do not do the same for input and
+        output redirection because they are expected to have 
+        a space before them and hence the last argument would
+        have been taken care of. */
+     if(*temp == '\0') {
+       *temp_str_ptr = '\0';
+       if((node->args[i] = calloc(strlen(temp_str) + 1, 1)) == NULL) {
+	 perror("Calloc failed");
+	 return NULL;
+       }
+
+       strcpy(node->args[i], temp_str);
+       /* Clear the temp string */
+       temp_str_ptr = temp_str;
+     }
+
+     add_node(tree, node);
+     
+     return tree;
+   }
+   /************ END of COMMAND detection *******/
 } 
 
 /* This function will read an entire string from
@@ -444,4 +645,80 @@ static void print_node(Node *node) {
 
     printf("\n");
   }
+}
+
+/* This function removes whitespace from the
+   beginning and end of a string. */
+static void trim(char **string) {
+  if(string !=NULL && *string != NULL) {
+    char *temp = *string;
+    char *start = NULL;
+    char *end = NULL;
+
+    /* Skip white space at the beginning */
+    while(*temp == ' ' && *temp != '\0') {
+      temp++;
+    }
+    
+    start = temp;
+
+    /* Skip white space at the end */
+    temp = (*string) + strlen(*string) - 1;
+    while(*temp == ' ' && temp > start) {
+      temp--;
+    }
+
+    end = temp;
+
+    /* Overwrite the rest of the string without the 
+       trailing and leading whitespace */
+    temp = *string;
+    while(start <= end) {
+      *temp = *start;
+      temp++;
+      start++;
+    }
+
+    *temp = '\0';
+  }
+}
+
+/* This function adds a conjuction to the specified tree and extracts
+   the left and right operands of the conjunction. */
+static int process_conjunction(char *input, const char *conjunction,
+				Tree *tree, char *left, char *right) {
+     Node *node = NULL;
+
+     /* Set up node and add it to the tree */
+     if((node = calloc(1, sizeof(Node))) == NULL) {
+       perror("Calloc failed");
+       return FAILURE;
+     }
+
+     node->type = OPERATOR;
+
+     /* Dynamically allocate memory for the operators name in a
+        NULL terminated string array */
+     if((node->args = calloc(2, sizeof(char *))) == NULL) {
+       perror("Calloc failed");
+       return FAILURE;
+     }
+
+     if((node->args[0] = calloc(strlen(conjunction) + 1, 1)) == NULL) {
+       perror("Calloc failed");
+       return FAILURE;
+     }
+
+     strcpy(node->args[0], conjunction);
+     add_node(tree, node);
+	  
+     break_string(input, conjunction, left, right);
+
+     /* Make sure the structure of the input is correct */
+     if(*left == '\0' || *right == '\0') {
+       fprintf(stderr, "Error: Invalid us of %s\n", conjunction);
+       return FAILURE;
+     }
+
+     return SUCCESS;
 }
