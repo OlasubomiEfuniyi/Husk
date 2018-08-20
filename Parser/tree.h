@@ -18,8 +18,8 @@ typedef enum type{OPERATOR, COMMAND} Type;
 /* This structure represents a node in the tree */
 typedef struct node {
   Type type;
-  char *input;
-  char *output;
+  char *input; /* Input filename */ 
+  char *output; /* Output filename */
   char **args; /* Null terminated array of argument strings */
 } Node;
 

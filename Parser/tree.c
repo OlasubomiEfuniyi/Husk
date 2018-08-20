@@ -108,14 +108,23 @@ void print_tree(Tree *tree) {
     print_tree(tree->left);
     /* Print out the data in the node of the root */
     if(tree->root != NULL) { 
-      printf("NAME: %s, TYPE: %s ", tree->root->args[0],
+      printf("NAME: %s, TYPE: %s, ", tree->root->args[0],
 	    (tree->root->type) == COMMAND ? "COMMAND" : "OPERATOR");
       if(tree->root->input) {
-	printf("INPUT: %s ", tree->root->input);
+	printf("INPUT: %s, ", tree->root->input);
       }
 
       if(tree->root->output) {
-	printf("OUTPUT: %s ", tree->root->output);
+	printf("OUTPUT: %s, ", tree->root->output);
+      }
+
+      if(tree -> root -> args) {
+	char **args = tree -> root -> args;
+	printf("ARGS:\n"); 
+	while(*args) {
+	  puts(*args);
+	  args++;
+	}
       }
 
       printf("\n");

@@ -289,7 +289,7 @@ static Tree *parse_aux(char *input, Tree *tree) {
         an operator is assumed to be a command */
      char *input_filename = NULL;
      char *output_filename = NULL;
-     int count = 0, count_space = TRUE,  i = 0;
+     int count = 0, count_space = TRUE, quotes_found = FALSE, i = 0;
      char *temp = input, *temp_str_ptr = NULL;
      char temp_str[MAX_INPUT_LEN] = "";
      
@@ -340,10 +340,22 @@ static Tree *parse_aux(char *input, Tree *tree) {
      while(*temp != *INPUT && *temp != *OUTPUT && *temp != '\0') {
        /* Stop when *input is input redirection, output redirection
           or null byte */
-       if(*temp == ' ' && count_space) {
+       if(*temp == ' ' && count_space && !quotes_found) {
 	 count++;
 	 count_space = FALSE;
        } else if(*temp != ' ') {
+	 /* Use a boolean to keep track of whether or not
+            a quote has been encountered in order to know
+            if the string should be broken down or read as a whole.
+            If an openening and closing quote is encountered before a
+            space is encountered, quotes found will be FALSE by the time
+            a space is encountered. */
+	 if(*temp == '"' && !quotes_found) {
+	   quotes_found = TRUE;
+	 } else if(*temp == '"' && quotes_found) {
+	   quotes_found = FALSE;
+	 }
+	 
 	 count_space = TRUE;
        } 
 
@@ -368,10 +380,12 @@ static Tree *parse_aux(char *input, Tree *tree) {
      /* Fill the arguments array */
      temp = input;
      temp_str_ptr = temp_str;
+     count_space = TRUE;
+     quotes_found = FALSE;
      while(*temp != *INPUT && *temp != *OUTPUT && *temp != '\0') {
        /* Stop when *input is input redirection, output redirection
           or null byte */
-       if(*temp == ' ' && count_space) {
+       if(*temp == ' ' && count_space && !quotes_found) {
 	 *temp_str_ptr = '\0';
 	 if((node->args[i] = calloc(strlen(temp_str) + 1, 1)) == NULL) {
 	   perror("Calloc failed");
@@ -383,7 +397,16 @@ static Tree *parse_aux(char *input, Tree *tree) {
 	 temp_str_ptr = temp_str;
 	 count_space = FALSE;
 	 i++;
-       } else if(*temp != ' ') {
+       } else if(*temp != ' ' || quotes_found) {
+	 /* Perform the following operations if temp
+            points to a non space character or a quote
+            has been opened */
+	 if(*temp == '"' && !quotes_found) {
+	   quotes_found = TRUE;
+	 } else if(*temp == '"' && quotes_found) {
+	   quotes_found = FALSE;
+	 }
+	 
 	 *temp_str_ptr = *temp;
 	 count_space = TRUE;
 	 temp_str_ptr++;
@@ -392,7 +415,7 @@ static Tree *parse_aux(char *input, Tree *tree) {
        temp++;
      }
 
-     /* Add a final argument to the array if null byte
+     /* Add the final argument to the array if null byte
         is encountered. Do not do the same for input and
         output redirection because they are expected to have 
         a space before them and hence the last argument would
