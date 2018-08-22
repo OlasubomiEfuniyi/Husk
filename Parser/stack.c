@@ -54,3 +54,9 @@ int is_full(Stack *stack) {
 int is_empty(Stack *stack) {
   return(stack->top == 0);
 }
+
+void destroy_stack(Stack *stack) {
+  if(stack != NULL) {
+    free(stack -> data);
+  }
+}

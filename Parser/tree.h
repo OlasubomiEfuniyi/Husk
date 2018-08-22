@@ -46,4 +46,9 @@ Node *add_node(Tree * tree, Node *node);
    does so by performing a preorder traversal. The effect of printing 
    an uninitialized tree is undefined. */ 
 void print_tree(Tree *tree);
+
+/* This function deallocates every dynamically allocated memory associated
+   with the tree pointed to by tree. */
+void destroy_tree(Tree *tree);
+
 #endif

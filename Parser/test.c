@@ -28,6 +28,7 @@ void test_init_stack() {
   printf("\n");
 
   assert(stack.size == num_elems);
+  destroy_stack(&stack);
 }
 
 /* This function tests the push function defined in
@@ -54,6 +55,7 @@ void test_push() {
   /* Try to push to a full stack */
   assert(push(&stack, &i) == FAILURE);
   assert(stack.top == stack.size);
+  destroy_stack(&stack);
 }
 
 /* This function tests the pop function
@@ -87,6 +89,8 @@ void test_pop() {
   /* Try to pop from an empty stack */
   assert(pop(&stack) == NULL);
   assert(stack.top == 0);
+
+  destroy_stack(&stack);
 }
 
 /********** END of stack test *************/
@@ -105,8 +109,8 @@ void test_add_node1(void) {
   
   node->type = OPERATOR;
   node->args = calloc(2, sizeof(char *));
-  node->args[0] = calloc(strlen(PIPE) + 1, 1);
-  strcpy(node->args[0], "||"); 
+  node->args[0] = calloc(strlen(OR) + 1, 1);
+  strcpy(node->args[0], OR); 
   add_node(&tree, node);
  
   
@@ -120,8 +124,8 @@ void test_add_node1(void) {
   node = calloc(1, sizeof(Node));
   node->type = OPERATOR;
   node->args = calloc(2, sizeof(char *));
-  node->args[0] = calloc(strlen("|") + 1, 1);
-  strcpy(node->args[0], "|");
+  node->args[0] = calloc(strlen(PIPE) + 1, 1);
+  strcpy(node->args[0], PIPE);
   add_node(&tree, node);
   
   node = calloc(1, sizeof(Node));
@@ -164,6 +168,7 @@ void test_add_node1(void) {
   add_node(&tree, node);
 
   print_tree(&tree);
+  destroy_tree(&tree);
 }
 
 /* This function tests the add_node 
@@ -240,6 +245,7 @@ void test_add_node2(void) {
   add_node(&tree, node);
 
   print_tree(&tree);
+  destroy_tree(&tree);
 }
 
 /* This function tests the add_node 
@@ -270,7 +276,7 @@ void test_add_node3(void) {
   node->type = OPERATOR;
   node->args = calloc(2, sizeof(char *));
   node->args[0] = calloc(strlen(PIPE) + 1, 1);
-  strcpy(node->args[0], "||"); 
+  strcpy(node->args[0], PIPE); 
   add_node(&tree, node);
 
   node = calloc(1, sizeof(Node));
@@ -316,14 +322,20 @@ void test_add_node3(void) {
   add_node(&tree, node);
 
   print_tree(&tree);
+  destroy_tree(&tree);
 }
 /*********** END of tree test **********/
 
 /*********** START of parser test ******/
 
 void test_parse(void) {
+  Tree *tree = NULL;
+  
   printf("test_parse:\n");
-  parse();
+  tree = parse();
+  print_tree(tree);
+  destroy_tree(tree);
+  free(tree);
 }
 
 /*********** END of parser test *******/

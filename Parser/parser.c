@@ -17,7 +17,6 @@ static int contains_operator(const char *source, const char *operator);
 static int break_string(const char *string, const char *operator, char *left, char *right);
 static int get_redirection_filename(const char *source, const char *type,
 				    char *filename);
-static void print_node(Node *node);
 static void trim(char **string);
 static int process_conjunction(char *input, const char *conjunction,
 			       Tree *tree, char *left, char *right);
@@ -39,7 +38,6 @@ Tree *parse(void) {
      is devoid of the newline character and has been trimmed. */
   read_input(MAX_INPUT_LEN, input, stdin);
   tree = parse_aux(input, tree);
-  print_tree(tree);
   return tree;
 }
 
@@ -457,7 +455,7 @@ static int read_input(int max, char input[], FILE *source) {
     return FAILURE;
   }
   
-  if(fgets(buffer, max, source) != NULL) {
+  if(fgets(buffer, max, source) != NULL && *buffer != '\n') {
     /* Remove the newline character and determine the 
        length of the string */
     char *char_ptr = buffer, *start = buffer, *end = NULL;
@@ -519,10 +517,7 @@ static int contains_operator(const char *source, const char *operator) {
    right part of the broken down string using the right output
    parameter. It returns SUCCESS on success and FAILURE on 
    failure. */ 
-static int break_string(const char *string, const char *operator, char*left, char *right) {
-  char *left_ptr = left;
-  char *right_ptr = right;
-  
+static int break_string(const char *string, const char *operator, char *left, char *right) {  
   if(string != NULL) {
     /* Determine how extraction should be performed */
     if(strcmp(operator, SUBSHELL) == 0) {
@@ -559,12 +554,12 @@ static int break_string(const char *string, const char *operator, char*left, cha
       /* Copy the contents of the subshell into left */
       start++;
       while(start < stop) {
-	*left_ptr = *start;
-	left_ptr++;
+	*left = *start;
+	left++;
 	start++;
       }
 
-      *left_ptr = '\0';
+      *left = '\0';
     } else if(strcmp(operator, OR) == 0 ||
 	      strcmp(operator, AND) == 0 ||
 	      strcmp(operator, PIPE) == 0) {
@@ -639,35 +634,6 @@ static int get_redirection_filename(const char *source, const char *type,
   *filename = '\0';
   
   return SUCCESS;
-}
-
-/* This function prints the information stored in the
-   members of a Node structure. */ 
-static void print_node(Node *node) {
-  if(node != NULL) {
-    char **args;
-    
-    printf("TYPE: ");
-    if((node->type) == COMMAND) {
-      printf("COMMAND\n");
-    } else if((node->type) == OPERATOR) {
-      printf("OPERATOR\n");
-    } else {
-      printf("UNKNOWN\n");
-    }
-
-    printf("INPUT: %s\n", (node->input));
-    printf("OUTPUT: %s\n", (node->output));
-
-    args = (node->args);
-    printf("ARGS: ");
-    while(*args) {
-      printf("%s ", *args);
-      args++;
-    }
-
-    printf("\n");
-  }
 }
 
 /* This function removes whitespace from the

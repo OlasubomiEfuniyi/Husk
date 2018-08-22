@@ -23,8 +23,15 @@ void init_tree(Tree *tree) {
 
 Node *add_node(Tree *tree, Node *node) {
   Stack stack;
+  Node *res;
+
+  /* Create stack to be used by  add_node_aux */
   init_stack(&stack, STACK_SIZE);
-  return add_node_aux(tree, node, &stack);
+  res = add_node_aux(tree, node, &stack);
+  /* Free the memory allocated for the stack */
+  destroy_stack(&stack);
+
+  return res;
 }
 
 /* This function aids the recursive call of add_node. */
@@ -133,3 +140,44 @@ void print_tree(Tree *tree) {
     print_tree(tree->right);
   }
 }
+
+void destroy_tree(Tree *tree) {
+  if(tree != NULL) {
+    char **args = NULL;
+    
+    destroy_tree(tree -> left);
+
+    if(tree -> root) {
+      /* Free the left subtree */
+      free(tree -> left);
+      /* Free input redirection filename if it exists */
+      if(tree -> root -> input) {
+	free(tree -> root -> input);
+      }
+
+      /* Free output redirection filename if it exists */
+      if(tree -> root -> output) {
+	free(tree -> root -> output);
+      }
+
+      /* Free argument strings and the argment arrray */
+      args = tree -> root -> args;
+
+      while(*args) {
+	free(*args);
+	args++;
+      }
+
+      free(tree -> root -> args);
+
+      /* Free the node */
+      free(tree -> root);
+    }
+    
+    destroy_tree(tree -> right);
+
+    /* Free the right subtree */
+    free(tree -> right);
+  }
+}
+

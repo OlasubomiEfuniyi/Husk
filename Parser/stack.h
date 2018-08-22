@@ -39,4 +39,8 @@ int is_full(Stack *stack);
 /* This function returns TRUE if the stack is empty and FALSE
    otherwise. */
 int is_empty(Stack *stack);
+
+/* This function deallocates any dynamically allocated memory associated
+   with a stack. */
+void destroy_stack(Stack *stack);
 #endif
