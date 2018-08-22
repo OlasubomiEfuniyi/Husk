@@ -6,9 +6,8 @@
 *.exe
 *.o
 *.so
-*~
-*test  #Ignore test files#
-*a.out
+*~     #Ignore emacs backup files#
+*a.out #Ignore any unnamed executables#
 # Packages #
 ############
 # it's better to unpack these files and commit the raw source
