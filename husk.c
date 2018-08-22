@@ -17,7 +17,6 @@ int main(void) {
   pid_t pid = 0;
   /* Run shell until it is terminated by a command */
   while(1) {
-    fflush(stdout);
     /* Reap any completed process running in the background */
     while((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
       printf("[%d] - Done\n", pid);
