@@ -1,0 +1,7 @@
+#ifndef EXECUTOR_H
+#define EXECUTOR_H
+
+/* This function executes a command represented
+   by the argument tree. */
+void execute(Tree *tree);
+#endif
