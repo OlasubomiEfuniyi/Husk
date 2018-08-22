@@ -12,6 +12,8 @@
 #define W_PERM O_WRONLY|O_CREAT|O_TRUNC
 #define R_PERM O_RDONLY
 #define MODE 0664
+#define TRUE 1
+#define FALSE 0
 
 static int execute_aux(Tree *t, int p_input_fd,
 		       int p_output_fd);
@@ -57,6 +59,24 @@ static int execute_aux(Tree *t, int p_input_fd,
 	exit(EXIT_SUCCESS);
       } else {
 	/************ Execute UNIX commands ***********/
+	char **args = NULL;
+	int should_wait = TRUE; 
+         /******** Check to see if & was appended at the end of the command *********/
+	  args = t -> root -> args;
+
+	  /* Skip to the end of the arguments */
+	  while(*args) {
+	    args ++;
+	  }
+
+	  args--; /* Look at the last argument */
+         /***************** End of check *******************************/
+
+	  if(strcmp(*args, "&") == 0) {
+	    *args = NULL;
+	    should_wait = FALSE;
+	  }
+	  
 	/* Create a child to execute the command */
 	if((child_id = fork()) < 0) {
 	  perror("fork");
@@ -67,13 +87,21 @@ static int execute_aux(Tree *t, int p_input_fd,
 	  /* This is the parent */
 	  int status = 0;
 
-	  /* Wait for the child */
-	  wait(&status);
+	  if(should_wait) {
+	    /* Wait if background processing is not specified. Make only reap
+               the most recent child and not any that was already existing 
+               in the background. */
+	    waitpid(child_id, &status, 0);
+	    if(status !=  0) {
+	       return FAILURE;
+	    }
 
-	  if(status !=  0) {
-	    return FAILURE;
+	    return SUCCESS;
+	  } else {
+	    printf("[%d] - Running\n", child_id);
+	    return SUCCESS;
 	  }
-	
+	  	
 	} else {
 	  /* This is the child */
 	
@@ -121,7 +149,7 @@ static int execute_aux(Tree *t, int p_input_fd,
 	    dup2(new_fd, STDOUT_FILENO);
 	    close(new_fd);
 	  }
-	
+
 	  execvp((t -> root -> args)[0], t -> root -> args);
 	
 	  /* This prints if execvp fails */

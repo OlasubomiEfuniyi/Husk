@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <sys/types.h>
 #include "Parser/tree.h"
 #include "Parser/parser.h"
 #include "Executor/executor.h"
@@ -12,9 +14,15 @@ int main(void) {
   char dirname[DIR_LEN + 1] = {'\0'};
   char *start = NULL;
   int count = 0;
-  
+  pid_t pid = 0;
   /* Run shell until it is terminated by a command */
   while(1) {
+    fflush(stdout);
+    /* Reap any completed process running in the background */
+    while((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
+      printf("[%d] - Done\n", pid);
+    }
+    
     /* Get the name of the current directory */
     getcwd(dirname, DIR_LEN + 1);
 
