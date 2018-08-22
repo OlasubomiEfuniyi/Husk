@@ -705,7 +705,7 @@ static int process_conjunction(char *input, const char *conjunction,
 
      /* Make sure the structure of the input is correct */
      if(*left == '\0' || *right == '\0') {
-       fprintf(stderr, "Error: Invalid us of %s\n", conjunction);
+       fprintf(stderr, "Error: Invalid use of %s\n", conjunction);
        return FAILURE;
      }
 
